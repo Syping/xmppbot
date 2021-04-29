@@ -25,6 +25,7 @@
 #include <QProcess>
 #include <QFile>
 
+#include "xmppbot.h"
 #include "unixsocket.h"
 #include "QXmppClient.h"
 #include "QXmppMessage.h"
@@ -33,7 +34,7 @@ int main(int argc, char *argv[])
 {
     QCoreApplication app(argc, argv);
     app.setApplicationName("xmppbot");
-    app.setApplicationVersion("0.2");
+    app.setApplicationVersion("0.2.1");
 
     QCommandLineParser commandLineParser;
     commandLineParser.addPositionalArgument("config", QCoreApplication::translate("xmppbot", "Configuration file."));
@@ -49,7 +50,7 @@ int main(int argc, char *argv[])
             settingsPath = a_settingsPath;
         }
         else {
-            QTextStream(stderr) << "xmppbot: " << a_settingsPath << " not found!" << Qt::endl;
+            QTextStream(stderr) << "xmppbot: " << a_settingsPath << " not found!" << xendl;
             return 1;
         }
     }
@@ -76,7 +77,7 @@ int main(int argc, char *argv[])
                         loginSet = true;
                     }
                     else {
-                        QTextStream(stderr) << "xmppbot: Login password can only be set once!" << Qt::endl;
+                        QTextStream(stderr) << "xmppbot: Login password can only be set once!" << xendl;
                         return 1;
                     }
                 }
@@ -113,14 +114,14 @@ int main(int argc, char *argv[])
                     }
 #endif
                     if (listen) {
-                        QTextStream(stderr) << "xmppbot: Account socket " << group << " initialised" << Qt::endl;
+                        QTextStream(stderr) << "xmppbot: Account socket " << group << " initialised" << xendl;
                         const QString incoming = settings.value("Incoming", QString()).toString();
                         if (incoming.startsWith("message:")) {
-                            QTextStream(stderr) << "xmppbot: Account message incoming " << group << " initialised" << Qt::endl;
+                            QTextStream(stderr) << "xmppbot: Account message incoming " << group << " initialised" << xendl;
                             h_msg.insert(group, incoming.mid(8));
                         }
                         if (incoming.startsWith("run:")) {
-                            QTextStream(stderr) << "xmppbot: Account run incoming " << group << " initialised" << Qt::endl;
+                            QTextStream(stderr) << "xmppbot: Account run incoming " << group << " initialised" << xendl;
                             h_run.insert(group, incoming.mid(4));
                         }
                     }
@@ -133,23 +134,23 @@ int main(int argc, char *argv[])
         }
     }
     else {
-        QTextStream(stderr) << "xmppbot: Can't initialise without settings.ini!" << Qt::endl;
+        QTextStream(stderr) << "xmppbot: Can't initialise without settings.ini!" << xendl;
         return 1;
     }
 
     if (jid.isEmpty() || jpw.isEmpty()) {
-        QTextStream(stderr) << "xmppbot: Can't initialise without XMPP account!" << Qt::endl;
+        QTextStream(stderr) << "xmppbot: Can't initialise without XMPP account!" << xendl;
         return 1;
     }
 
     QObject::connect(&client, &QXmppClient::connected, [&]() {
-        QTextStream(stderr) << "xmppbot: Account " << jid << " connected" << Qt::endl;
+        QTextStream(stderr) << "xmppbot: Account " << jid << " connected" << xendl;
         QXmppPresence xmppPresence(QXmppPresence::Available);
         client.setClientPresence(xmppPresence);
     });
 
     QObject::connect(&client, &QXmppClient::disconnected, [&]() {
-        QTextStream(stderr) << "xmppbot: Account " << jid << " disconnected" << Qt::endl;
+        QTextStream(stderr) << "xmppbot: Account " << jid << " disconnected" << xendl;
         client.connectToServer(jid, jpw);
     });
 
@@ -174,14 +175,14 @@ int main(int argc, char *argv[])
             qint64 pid;
             bool isStarted = QProcess::startDetached(run, QStringList() << from << xmppMessage.to() << xmppMessage.body(), QString(), &pid);
             if (isStarted) {
-                QTextStream(stderr) << "xmppbot: Account " << from_jid << " executed pid " << pid << Qt::endl;
+                QTextStream(stderr) << "xmppbot: Account " << from_jid << " executed pid " << pid << xendl;
             }
         }
     });
 
     client.connectToServer(jid, jpw);
 
-    QTextStream(stderr) << "xmppbot: Account login " << jid << " initialised" << Qt::endl;
+    QTextStream(stderr) << "xmppbot: Account login " << jid << " initialised" << xendl;
 
     return app.exec();
 }
