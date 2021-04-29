@@ -33,7 +33,7 @@ int main(int argc, char *argv[])
 {
     QCoreApplication app(argc, argv);
     app.setApplicationName("xmppbot");
-    app.setApplicationVersion("0.1");
+    app.setApplicationVersion("0.2");
 
     QCommandLineParser commandLineParser;
     commandLineParser.addPositionalArgument("config", QCoreApplication::translate("xmppbot", "Configuration file."));
@@ -68,6 +68,10 @@ int main(int argc, char *argv[])
                 if (key == "Password") {
                     if (!loginSet) {
                         jid = group;
+                        const QString instance = settings.value("Instance", QString()).toString();
+                        if (!instance.isEmpty()) {
+                            jid += QLatin1String("/") + instance;
+                        }
                         jpw = settings.value(key, QString()).toString();
                         loginSet = true;
                     }
