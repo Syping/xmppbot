@@ -1,0 +1,4 @@
+[submodule "src/3rdparty/qxmpp"]
+path = src/3rdparty/qxmpp
+url = https://github.com/qxmpp-project/qxmpp.git
+branch = 1.4
