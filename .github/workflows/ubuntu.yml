@@ -14,8 +14,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v2
-      with: 
-      - submodules: recursive
+      submodules: recursive
     - name: Install packages
       run: sudo .ci/ubuntu_install.sh
     - name: Configure CMake
