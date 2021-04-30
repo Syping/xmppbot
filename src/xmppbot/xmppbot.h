@@ -25,6 +25,12 @@
 #define xendl Qt::endl;
 #else
 #define xendl endl;
-#endif 
+#endif
+
+#ifdef Q_OS_WIN
+#define XmppSocketType "NamedPipe"
+#else
+#define XmppSocketType "UnixSocket"
+#endif
 
 #endif // XMPPBOT_H

@@ -23,21 +23,22 @@
 #include <QTextStream>
 #include <QSettings>
 #include <QProcess>
+#include <QTimer>
 #include <QFile>
 
 #include "xmppbot.h"
-#include "unixsocket.h"
+#include "xmppsocket.h"
 #include "QXmppClient.h"
 #include "QXmppMessage.h"
 
 int main(int argc, char *argv[])
 {
     QCoreApplication app(argc, argv);
-    app.setApplicationName("xmppbot");
-    app.setApplicationVersion("0.2.1");
+    app.setApplicationName(QLatin1String("xmppbot"));
+    app.setApplicationVersion(QLatin1String("0.3"));
 
     QCommandLineParser commandLineParser;
-    commandLineParser.addPositionalArgument("config", QCoreApplication::translate("xmppbot", "Configuration file."));
+    commandLineParser.addPositionalArgument(QLatin1String("config"), QCoreApplication::translate("xmppbot", "Configuration file."));
     commandLineParser.addHelpOption();
     commandLineParser.addVersionOption();
     commandLineParser.process(app);
@@ -50,7 +51,7 @@ int main(int argc, char *argv[])
             settingsPath = a_settingsPath;
         }
         else {
-            QTextStream(stderr) << "xmppbot: " << a_settingsPath << " not found!" << xendl;
+            QTextStream(stderr) << QLatin1String("xmppbot: ") << a_settingsPath << QLatin1String(" not found!") << xendl;
             return 1;
         }
     }
@@ -66,10 +67,10 @@ int main(int argc, char *argv[])
         for (const QString &group : settings.childGroups()) {
             settings.beginGroup(group);
             for (const QString &key : settings.childKeys()) {
-                if (key == "Password") {
+                if (key == QLatin1String("Password")) {
                     if (!loginSet) {
                         jid = group;
-                        const QString instance = settings.value("Instance", QString()).toString();
+                        const QString instance = settings.value(QLatin1String("Instance"), QString()).toString();
                         if (!instance.isEmpty()) {
                             jid += QLatin1String("/") + instance;
                         }
@@ -81,52 +82,54 @@ int main(int argc, char *argv[])
                         return 1;
                     }
                 }
-                if (key == "UnixSocket") {
-                    UnixSocket *unixSocket = new UnixSocket(&client, jid, group);
-                    const QString permission = settings.value("SocketPermission", QString()).toString();
-                    if (permission == "UG" || permission == "UserGroup") {
-                        unixSocket->setSocketOptions(QLocalServer::UserAccessOption | QLocalServer::GroupAccessOption);
+                if (key == QLatin1String(XmppSocketType)) {
+                    XmppSocket *xmppSocket = new XmppSocket(&client, jid, group);
+#ifdef Q_OS_UNIX
+                    const QString permission = settings.value(QLatin1String("SocketPermission"), QString()).toString();
+                    if (permission == QLatin1String("UG") || permission == QLatin1String("UserGroup")) {
+                        xmppSocket->setSocketOptions(QLocalServer::UserAccessOption | QLocalServer::GroupAccessOption);
                     }
-                    if (permission == "UO" || permission == "UserOther") {
-                        unixSocket->setSocketOptions(QLocalServer::UserAccessOption | QLocalServer::OtherAccessOption);
+                    if (permission == QLatin1String("UO") || permission == QLatin1String("UserOther")) {
+                        xmppSocket->setSocketOptions(QLocalServer::UserAccessOption | QLocalServer::OtherAccessOption);
                     }
-                    if (permission == "U" || permission == "User") {
-                        unixSocket->setSocketOptions(QLocalServer::UserAccessOption);
+                    if (permission == QLatin1String("U") || permission == QLatin1String("User")) {
+                        xmppSocket->setSocketOptions(QLocalServer::UserAccessOption);
                     }
-                    if (permission == "GO" || permission == "GroupOther") {
-                        unixSocket->setSocketOptions(QLocalServer::GroupAccessOption | QLocalServer::OtherAccessOption);
+                    if (permission == QLatin1String("GO") || permission == QLatin1String("GroupOther")) {
+                        xmppSocket->setSocketOptions(QLocalServer::GroupAccessOption | QLocalServer::OtherAccessOption);
                     }
-                    if (permission == "G" || permission == "Group") {
-                        unixSocket->setSocketOptions(QLocalServer::GroupAccessOption);
+                    if (permission == QLatin1String("G") || permission == QLatin1String("Group")) {
+                        xmppSocket->setSocketOptions(QLocalServer::GroupAccessOption);
                     }
-                    if (permission == "O" || permission == "Other") {
-                        unixSocket->setSocketOptions(QLocalServer::OtherAccessOption);
+                    if (permission == QLatin1String("O") || permission == QLatin1String("Other")) {
+                        xmppSocket->setSocketOptions(QLocalServer::OtherAccessOption);
                     }
-                    if (permission == "A" || permission == "All" || permission == "UGO" || permission == "UserGroupOther") {
-                        unixSocket->setSocketOptions(QLocalServer::WorldAccessOption);
+                    if (permission == QLatin1String("A") || permission == QLatin1String("All") || permission == QLatin1String("UGO") || permission == QLatin1String("UserGroupOther")) {
+                        xmppSocket->setSocketOptions(QLocalServer::WorldAccessOption);
                     }
+#endif
                     const QString socketPath = settings.value(key, QString()).toString();
-                    bool listen = unixSocket->listen(socketPath);
+                    bool listen = xmppSocket->listen(socketPath);
 #ifdef Q_OS_UNIX
                     if (!listen) {
                         QLocalServer::removeServer(socketPath);
-                        listen = unixSocket->listen(socketPath);
+                        listen = xmppSocket->listen(socketPath);
                     }
 #endif
                     if (listen) {
-                        QTextStream(stderr) << "xmppbot: Account socket " << group << " initialised" << xendl;
+                        QTextStream(stderr) << QLatin1String("xmppbot: Account socket ") << group << QLatin1String(" initialised") << xendl;
                         const QString incoming = settings.value("Incoming", QString()).toString();
-                        if (incoming.startsWith("message:")) {
-                            QTextStream(stderr) << "xmppbot: Account message incoming " << group << " initialised" << xendl;
+                        if (incoming.startsWith(QLatin1String("message:"))) {
+                            QTextStream(stderr) << QLatin1String("xmppbot: Account message incoming ") << group << QLatin1String(" initialised") << xendl;
                             h_msg.insert(group, incoming.mid(8));
                         }
-                        if (incoming.startsWith("run:")) {
-                            QTextStream(stderr) << "xmppbot: Account run incoming " << group << " initialised" << xendl;
+                        if (incoming.startsWith(QLatin1String("run:"))) {
+                            QTextStream(stderr) << QLatin1String("xmppbot: Account run incoming ") << group << QLatin1String(" initialised") << xendl;
                             h_run.insert(group, incoming.mid(4));
                         }
                     }
                     else {
-                        delete unixSocket;
+                        delete xmppSocket;
                     }
                 }
             }
@@ -134,24 +137,36 @@ int main(int argc, char *argv[])
         }
     }
     else {
-        QTextStream(stderr) << "xmppbot: Can't initialise without settings.ini!" << xendl;
+        QTextStream(stderr) << QLatin1String("xmppbot: Can't initialise without settings.ini!") << xendl;
         return 1;
     }
 
     if (jid.isEmpty() || jpw.isEmpty()) {
-        QTextStream(stderr) << "xmppbot: Can't initialise without XMPP account!" << xendl;
+        QTextStream(stderr) << QLatin1String("xmppbot: Can't initialise without XMPP account!") << xendl;
         return 1;
     }
 
-    QObject::connect(&client, &QXmppClient::connected, [&]() {
-        QTextStream(stderr) << "xmppbot: Account " << jid << " connected" << xendl;
-        QXmppPresence xmppPresence(QXmppPresence::Available);
-        client.setClientPresence(xmppPresence);
-    });
+    QTextStream(stderr) << QLatin1String("xmppbot: Account login ") << jid << QLatin1String(" initialised") << xendl;
 
-    QObject::connect(&client, &QXmppClient::disconnected, [&]() {
-        QTextStream(stderr) << "xmppbot: Account " << jid << " disconnected" << xendl;
-        client.connectToServer(jid, jpw);
+    QObject::connect(&client, &QXmppClient::stateChanged, [&](QXmppClient::State state) {
+        switch (state) {
+        case QXmppClient::ConnectedState: {
+            QTextStream(stderr) << QLatin1String("xmppbot: Account ") << jid << QLatin1String(" connected") << xendl;
+            QXmppPresence xmppPresence(QXmppPresence::Available);
+            client.setClientPresence(xmppPresence);
+            break;
+        }
+        case QXmppClient::ConnectingState:
+            break;
+        case QXmppClient::DisconnectedState:
+            QTextStream(stderr) << QLatin1String("xmppbot: Account ") << jid << QLatin1String(" disconnected") << xendl;
+            QTimer::singleShot(5000, &client, [&]() {
+                client.connectToServer(jid, jpw);
+            });
+            break;
+        default:
+            break;
+        }
     });
 
     QObject::connect(&client, &QXmppClient::messageReceived, [&](const QXmppMessage &xmppMessage) {
@@ -175,14 +190,12 @@ int main(int argc, char *argv[])
             qint64 pid;
             bool isStarted = QProcess::startDetached(run, QStringList() << from << xmppMessage.to() << xmppMessage.body(), QString(), &pid);
             if (isStarted) {
-                QTextStream(stderr) << "xmppbot: Account " << from_jid << " executed pid " << pid << xendl;
+                QTextStream(stderr) << QLatin1String("xmppbot: Account ") << from_jid << QLatin1String(" executed pid ") << pid << xendl;
             }
         }
     });
 
     client.connectToServer(jid, jpw);
-
-    QTextStream(stderr) << "xmppbot: Account login " << jid << " initialised" << xendl;
 
     return app.exec();
 }

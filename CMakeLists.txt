@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.7)
 
-project(xmppbot LANGUAGES CXX)
+project(xmppbot VERSION 0.3 LANGUAGES CXX)
 
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
 
@@ -12,17 +12,19 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 find_package(QT NAMES Qt6 Qt5 COMPONENTS Core REQUIRED)
-find_package(Qt${QT_VERSION_MAJOR} COMPONENTS Core Network REQUIRED)
+find_package(Qt${QT_VERSION_MAJOR} COMPONENTS Network REQUIRED)
 
-add_subdirectory(src/3rdparty/qxmpp)
+include(cmake/LoadDefs.cmake)
+include(cmake/LoadQXmpp.cmake)
+
 add_executable(xmppbot
     src/xmppbot/main.cpp
-    src/xmppbot/unixsocket.cpp
-    src/xmppbot/unixsocket.h
     src/xmppbot/xmppbot.h
+    src/xmppbot/xmppsocket.cpp
+    src/xmppbot/xmppsocket.h
 )
-add_dependencies(xmppbot qxmpp)
+add_dependencies(xmppbot ${QXmppLibrary})
 
-target_link_libraries(xmppbot Qt${QT_VERSION_MAJOR}::Network qxmpp)
+target_link_libraries(xmppbot Qt${QT_VERSION_MAJOR}::Network ${QXmppLibrary})
 
 install(TARGETS xmppbot DESTINATION bin)

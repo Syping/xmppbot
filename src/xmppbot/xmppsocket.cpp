@@ -18,14 +18,14 @@
 
 #include <QLocalSocket>
 
-#include "unixsocket.h"
+#include "xmppsocket.h"
 #include "QXmppMessage.h"
 
-UnixSocket::UnixSocket(QXmppClient *client, const QString &from, const QString &to) : client(client), from(from), to(to)
+XmppSocket::XmppSocket(QXmppClient *client, const QString &from, const QString &to) : client(client), from(from), to(to)
 {
 }
 
-void UnixSocket::readyRead()
+void XmppSocket::readyRead()
 {
     QLocalSocket *localSocket = qobject_cast<QLocalSocket*>(sender());
     if (localSocket) {
@@ -37,10 +37,10 @@ void UnixSocket::readyRead()
     }
 }
 
-void UnixSocket::incomingConnection(quintptr socketDescriptor)
+void XmppSocket::incomingConnection(quintptr socketDescriptor)
 {
     QLocalSocket *localSocket = new QLocalSocket(this);
     localSocket->setSocketDescriptor(socketDescriptor);
-    QObject::connect(localSocket, &QLocalSocket::readyRead, this, &UnixSocket::readyRead);
+    QObject::connect(localSocket, &QLocalSocket::readyRead, this, &XmppSocket::readyRead);
     QObject::connect(localSocket, &QLocalSocket::disconnected, localSocket, &QLocalSocket::deleteLater);
 }

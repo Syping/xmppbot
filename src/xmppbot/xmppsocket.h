@@ -16,19 +16,19 @@
 * responsible for anything with use of the software, you are self responsible.
 *****************************************************************************/
 
-#ifndef UNIXSOCKET_H
-#define UNIXSOCKET_H
+#ifndef XMPPSOCKET_H
+#define XMPPSOCKET_H
 
 #include <QLocalServer>
 #include <QObject>
 
 #include "QXmppClient.h"
 
-class UnixSocket : public QLocalServer
+class XmppSocket : public QLocalServer
 {
     Q_OBJECT
 public:
-    UnixSocket(QXmppClient *client, const QString &from, const QString &to);
+    XmppSocket(QXmppClient *client, const QString &from, const QString &to);
 
 private slots:
     void readyRead();
@@ -42,4 +42,4 @@ protected:
     void incomingConnection(quintptr socketDescriptor);
 };
 
-#endif // UNIXSOCKET_H
+#endif // XMPPSOCKET_H
