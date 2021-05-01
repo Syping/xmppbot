@@ -71,9 +71,13 @@ target_include_directories(xmppbotlua PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}
 )
 
+if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+    set(LUA_DEFINES -DLUA_USE_LINUX)
+endif()
+
 target_compile_definitions(xmppbotlua PUBLIC
     -DLUA_COMPAT_5_2
-    -DLUA_USE_LINUX
+    ${LUA_DEFINES}
 )
 
 target_link_libraries(xmppbotlua PUBLIC
