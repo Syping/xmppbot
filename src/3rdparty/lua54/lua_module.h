@@ -1,5 +1,5 @@
 /*****************************************************************************
-* xmppbot Simple Unix Socket based XMPP bot
+* xmppbotlua Lua Module for xmppbot
 * Copyright (C) 2021 Syping
 *
 * Redistribution and use in source and binary forms, with or without modification,
@@ -16,23 +16,7 @@
 * responsible for anything with use of the software, you are self responsible.
 *****************************************************************************/
 
-#ifndef XMPPBOT_H
-#define XMPPBOT_H
-
-#include <QtGlobal>
-
-#if QT_VERSION >= QT_VERSION_CHECK(5, 15, 0)
-#define xendl Qt::endl;
-#else
-#define xendl endl;
-#endif
-
-#ifdef Q_OS_WIN
-#define XmppSocketType "NamedPipe"
-#else
-#define XmppSocketType "UnixSocket"
-#endif
-
-#define getXmppClient() qvariant_cast<QXmppClient*>(QCoreApplication::instance()->property("XmppClient"))
-
-#endif // XMPPBOT_H
+#include "lua.h"
+#include "lualib.h"
+#include "lauxlib.h"
+#include "llimits.h"

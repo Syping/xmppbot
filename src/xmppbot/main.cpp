@@ -1,5 +1,5 @@
 /*****************************************************************************
-* xmppbot Simple unix socket based XMPP bot
+* xmppbot Simple Unix Socket based XMPP bot
 * Copyright (C) 2021 Syping
 *
 * Redistribution and use in source and binary forms, with or without modification,
@@ -27,15 +27,19 @@
 #include <QFile>
 
 #include "xmppbot.h"
+#include "xmppbotlua.h"
+#include "xmppbotluathread.h"
 #include "xmppsocket.h"
+
 #include "QXmppClient.h"
 #include "QXmppMessage.h"
+#include "QXmppPresence.h"
 
 int main(int argc, char *argv[])
 {
     QCoreApplication app(argc, argv);
     app.setApplicationName(QLatin1String("xmppbot"));
-    app.setApplicationVersion(QLatin1String("0.3"));
+    app.setApplicationVersion(QLatin1String("0.4"));
 
     QCommandLineParser commandLineParser;
     commandLineParser.addPositionalArgument(QLatin1String("config"), QCoreApplication::translate("xmppbot", "Configuration file."));
@@ -57,10 +61,12 @@ int main(int argc, char *argv[])
     }
 
     QXmppClient client;
+    app.setProperty("XmppClient", QVariant::fromValue<QXmppClient*>(&client));
 
     bool loginSet = false;
     QString jid, jpw;
     QHash<QString, QString> h_msg;
+    QHash<QString, QString> h_lua;
     QHash<QString, QString> h_run;
     if (QFile::exists(settingsPath)) {
         QSettings settings(settingsPath, QSettings::IniFormat);
@@ -80,6 +86,21 @@ int main(int argc, char *argv[])
                     else {
                         QTextStream(stderr) << "xmppbot: Login password can only be set once!" << xendl;
                         return 1;
+                    }
+                }
+                if (key == QLatin1String("Incoming")) {
+                    const QString incoming = settings.value("Incoming", QString()).toString();
+                    if (incoming.startsWith(QLatin1String("message:"))) {
+                        QTextStream(stderr) << QLatin1String("xmppbot: Account message incoming ") << group << QLatin1String(" initialised") << xendl;
+                        h_msg.insert(group, incoming.mid(8));
+                    }
+                    if (incoming.startsWith(QLatin1String("lua:"))) {
+                        QTextStream(stderr) << QLatin1String("xmppbot: Account lua incoming ") << group << QLatin1String(" initialised") << xendl;
+                        h_lua.insert(group, incoming.mid(4));
+                    }
+                    if (incoming.startsWith(QLatin1String("run:"))) {
+                        QTextStream(stderr) << QLatin1String("xmppbot: Account run incoming ") << group << QLatin1String(" initialised") << xendl;
+                        h_run.insert(group, incoming.mid(4));
                     }
                 }
                 if (key == QLatin1String(XmppSocketType)) {
@@ -118,15 +139,6 @@ int main(int argc, char *argv[])
 #endif
                     if (listen) {
                         QTextStream(stderr) << QLatin1String("xmppbot: Account socket ") << group << QLatin1String(" initialised") << xendl;
-                        const QString incoming = settings.value("Incoming", QString()).toString();
-                        if (incoming.startsWith(QLatin1String("message:"))) {
-                            QTextStream(stderr) << QLatin1String("xmppbot: Account message incoming ") << group << QLatin1String(" initialised") << xendl;
-                            h_msg.insert(group, incoming.mid(8));
-                        }
-                        if (incoming.startsWith(QLatin1String("run:"))) {
-                            QTextStream(stderr) << QLatin1String("xmppbot: Account run incoming ") << group << QLatin1String(" initialised") << xendl;
-                            h_run.insert(group, incoming.mid(4));
-                        }
                     }
                     else {
                         delete xmppSocket;
@@ -185,6 +197,12 @@ int main(int argc, char *argv[])
             QXmppMessage xmppMessage(jid, from, msg);
             client.sendPacket(xmppMessage);
         }
+        const QString lua = h_lua.value(from_jid, QString());
+        if (!lua.isEmpty()) {
+            XmppBotLuaThread *xmppBotLuaThread = new XmppBotLuaThread(lua, QLatin1String("messageReceived"), QVariantList() << from << xmppMessage.to() << xmppMessage.body());
+            QObject::connect(xmppBotLuaThread, &XmppBotLuaThread::finished, xmppBotLuaThread, &XmppBotLuaThread::deleteLater);
+            xmppBotLuaThread->start();
+        }
         const QString run = h_run.value(from_jid, QString());
         if (!run.isEmpty()) {
             qint64 pid;
@@ -192,6 +210,22 @@ int main(int argc, char *argv[])
             if (isStarted) {
                 QTextStream(stderr) << QLatin1String("xmppbot: Account ") << from_jid << QLatin1String(" executed pid ") << pid << xendl;
             }
+        }
+    });
+
+    QObject::connect(&client, &QXmppClient::presenceReceived, [&](const QXmppPresence &xmppPresence) {
+        const QString from = xmppPresence.from();
+        QString from_jid;
+        for (const QChar &val : from) {
+            if (val == '/')
+                break;
+            from_jid += val;
+        }
+        const QString lua = h_lua.value(from_jid, QString());
+        if (!lua.isEmpty()) {
+            XmppBotLuaThread *xmppBotLuaThread = new XmppBotLuaThread(lua, QLatin1String("presenceReceived"), QVariantList() << from << static_cast<int>(xmppPresence.type()) << static_cast<int>(xmppPresence.availableStatusType()) << xmppPresence.statusText());
+            QObject::connect(xmppBotLuaThread, &XmppBotLuaThread::finished, xmppBotLuaThread, &XmppBotLuaThread::deleteLater);
+            xmppBotLuaThread->start();
         }
     });
 

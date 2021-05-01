@@ -1,5 +1,5 @@
 /*****************************************************************************
-* xmppbot Simple unix socket based XMPP bot
+* xmppbot Simple Unix Socket based XMPP bot
 * Copyright (C) 2021 Syping
 *
 * Redistribution and use in source and binary forms, with or without modification,

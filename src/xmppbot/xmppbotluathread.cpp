@@ -1,5 +1,5 @@
 /*****************************************************************************
-* xmppbot Simple Unix Socket based XMPP bot
+* xmppbotlua Lua Module for xmppbot
 * Copyright (C) 2021 Syping
 *
 * Redistribution and use in source and binary forms, with or without modification,
@@ -16,23 +16,29 @@
 * responsible for anything with use of the software, you are self responsible.
 *****************************************************************************/
 
-#ifndef XMPPBOT_H
-#define XMPPBOT_H
+#include <QFile>
 
-#include <QtGlobal>
+#include "xmppbotlua.h"
+#include "xmppbotluathread.h"
 
-#if QT_VERSION >= QT_VERSION_CHECK(5, 15, 0)
-#define xendl Qt::endl;
-#else
-#define xendl endl;
-#endif
+XmppBotLuaThread::XmppBotLuaThread(const QString &filePath, const QString &lua_function, const QVariantList &lua_args) :
+    filePath(filePath), lua_function(lua_function), lua_args(lua_args)
+{
+}
 
-#ifdef Q_OS_WIN
-#define XmppSocketType "NamedPipe"
-#else
-#define XmppSocketType "UnixSocket"
-#endif
-
-#define getXmppClient() qvariant_cast<QXmppClient*>(QCoreApplication::instance()->property("XmppClient"))
-
-#endif // XMPPBOT_H
+void XmppBotLuaThread::run()
+{
+    QByteArray script;
+    if (QFile::exists(filePath)) {
+        QFile scriptFile(filePath);
+        if (scriptFile.open(QFile::ReadOnly)) {
+            script = scriptFile.readAll();
+            scriptFile.close();
+        }
+    }
+    if (!script.isEmpty()) {
+        XmppBotLua xmppBotLua;
+        xmppBotLua.executeLuaScript(script);
+        xmppBotLua.executeLuaFunction(lua_function.toUtf8().constData(), lua_args);
+    }
+}

@@ -1,5 +1,7 @@
 cmake_minimum_required(VERSION 3.7)
+
 find_package(Qt${QT_VERSION_MAJOR} COMPONENTS Core Network Xml REQUIRED)
+
 option(BUILD_SYSTEM_QXMPP "Build with system QXmpp Library" OFF)
 if(BUILD_SYSTEM_QXMPP)
     find_package(QXmpp)
@@ -22,3 +24,10 @@ else()
     set(QXmppLibrary qxmpp)
     add_subdirectory(src/3rdparty/qxmpp/src)
 endif()
+
+add_definitions(
+    -DQT_DISABLE_DEPRECATED_BEFORE=0x050F00
+    -DQURL_NO_CAST_FROM_STRING
+    -DQT_NO_CAST_TO_ASCII
+    -DQT_NO_FOREACH
+)
