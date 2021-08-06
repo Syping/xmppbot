@@ -16,13 +16,15 @@
 * responsible for anything with use of the software, you are self responsible.
 *****************************************************************************/
 
+#include <QCoreApplication>
+#include <QEventLoop>
 #include <QFile>
 
 #include "xmppbotlua.h"
 #include "xmppbotluathread.h"
 
-XmppBotLuaThread::XmppBotLuaThread(const QString &filePath, const QString &lua_function, const QVariantList &lua_args) :
-    filePath(filePath), lua_function(lua_function), lua_args(lua_args)
+XmppBotLuaThread::XmppBotLuaThread(const QString &filePath, const QString &lua_function, const QVariantList &lua_args, const bool &lua_globalthread) :
+    filePath(filePath), lua_function(lua_function), lua_args(lua_args), lua_globalthread(lua_globalthread)
 {
 }
 
@@ -36,9 +38,20 @@ void XmppBotLuaThread::run()
             scriptFile.close();
         }
     }
-    if (!script.isEmpty()) {
-        XmppBotLua xmppBotLua;
-        xmppBotLua.executeLuaScript(script);
-        xmppBotLua.executeLuaFunction(lua_function.toUtf8().constData(), lua_args);
+
+    if (script.isEmpty())
+        return;
+
+    XmppBotLua xmppBotLua;
+    xmppBotLua.executeLuaScript(script);
+    xmppBotLua.executeLuaFunction(lua_function.toUtf8().constData(), lua_args);
+
+    if (lua_globalthread) {
+        QObject::connect(this, &XmppBotLuaThread::executeLuaFunction, this, [&](const QString &lua_function, const QVariantList &lua_args) {
+            xmppBotLua.executeLuaFunction(lua_function.toUtf8().constData(), lua_args);
+        });
+        QEventLoop threadLoop;
+        QObject::connect(QCoreApplication::instance(), &QCoreApplication::aboutToQuit, &threadLoop, &QEventLoop::quit);
+        threadLoop.exec();
     }
 }

@@ -70,10 +70,20 @@ public:
     static int getArgumentCount(lua_State *L_p);
 
 private:
+    // XMPP
     static int jid(lua_State *L_p);
     static int jin(lua_State *L_p);
     static int sendMessage(lua_State *L_p);
-    static int setPresence(lua_State *L_p);
+    static int setClientPresence(lua_State *L_p);
+
+    // JSON
+    static int jsonToTable(lua_State *L_p);
+    static int tableToJson(lua_State *L_p);
+
+    // Process
+    static int executeProcess(lua_State *L_p);
+
+    // Lua
     lua_State *L;
 };
 

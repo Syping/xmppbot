@@ -17,6 +17,10 @@
 *****************************************************************************/
 
 #include <QCoreApplication>
+#include <QJsonDocument>
+#include <QJsonObject>
+#include <QJsonArray>
+#include <QProcess>
 #include <QTextStream>
 
 #include "xmppbot.h"
@@ -30,11 +34,11 @@ XmppBotLua::XmppBotLua(QObject *parent) : QObject(parent)
     L = luaL_newstate();
     luaL_openlibs(L);
 
-    // Functions
+    // XMPP Functions
     pushFunction("jid", jid);
     pushFunction("jin", jin);
     pushFunction("sendMessage", sendMessage);
-    pushFunction("setPresence", setPresence);
+    pushFunction("setClientPresence", setClientPresence);
 
     // XMPP Presence
     pushVariant("PresenceAvailable", static_cast<int>(QXmppPresence::Available));
@@ -48,6 +52,15 @@ XmppBotLua::XmppBotLua(QObject *parent) : QObject(parent)
     pushVariant("StatusSnooze", static_cast<int>(QXmppPresence::XA));
     pushVariant("StatusBusy", static_cast<int>(QXmppPresence::DND));
     pushVariant("StatusChat", static_cast<int>(QXmppPresence::Chat));
+
+    // JSON
+    pushFunction("jsonToTable", jsonToTable);
+    pushFunction("tableToJson", tableToJson);
+    pushVariant("JsonCompact", static_cast<int>(QJsonDocument::Compact));
+    pushVariant("JsonIndented", static_cast<int>(QJsonDocument::Indented));
+
+    // Process
+    pushFunction("executeProcess", executeProcess);
 }
 
 XmppBotLua::~XmppBotLua()
@@ -371,7 +384,7 @@ int XmppBotLua::sendMessage(lua_State *L_p)
     return 1;
 }
 
-int XmppBotLua::setPresence(lua_State *L_p)
+int XmppBotLua::setClientPresence(lua_State *L_p)
 {
     bool presenceSet = false;
     if (getArgumentCount(L_p) >= 2 && getArgumentCount(L_p) <= 3) {
@@ -389,4 +402,90 @@ int XmppBotLua::setPresence(lua_State *L_p)
     }
     pushVariant(L_p, presenceSet);
     return 1;
+}
+
+int XmppBotLua::jsonToTable(lua_State *L_p)
+{
+    if (getArgumentCount(L_p) >= 1) {
+        const QJsonDocument jsonDocument = QJsonDocument::fromJson(getVariant(L_p, 1).toString().toUtf8());
+        if (jsonDocument.isObject()) {
+            pushVariant(L_p, jsonDocument.object().toVariantMap());
+            return 1;
+        }
+        else if (jsonDocument.isArray()) {
+            pushVariant(L_p, jsonDocument.array().toVariantList());
+            return 1;
+        }
+    }
+    return 0;
+}
+
+int XmppBotLua::tableToJson(lua_State *L_p)
+{
+    if (getArgumentCount(L_p) >= 1) {
+        QJsonDocument::JsonFormat jsonFormat = QJsonDocument::Compact;
+        if (getArgumentCount(L_p) >= 2) {
+            jsonFormat = static_cast<QJsonDocument::JsonFormat>(getVariant(L_p, 2).toInt());
+        }
+        pushVariant(L_p, QString::fromUtf8(QJsonDocument(QJsonObject::fromVariantMap(getVariant(L_p, 1).toMap())).toJson(jsonFormat)));
+        return 1;
+    }
+    return 0;
+}
+
+int XmppBotLua::executeProcess(lua_State *L_p)
+{
+    if (getArgumentCount(L_p) >= 1) {
+        int processReturn = 0;
+        bool runInBackground = false;
+        bool processSuccessed = false;
+        if (getArgumentCount(L_p) >= 2) {
+            QStringList processArguments;
+            QString processPath = getVariant(L_p, 1).toString();
+            QVariant argument = getVariant(L_p, 2);
+            if (static_cast<QMetaType::Type>(argument.type()) == QMetaType::QVariantMap) {
+                const QVariantMap argumentMap = argument.toMap();
+                for (auto it = argumentMap.constBegin(); it != argumentMap.constEnd(); it++) {
+                    processArguments << it.value().toString();
+                }
+            }
+            else if (argument.type() == QVariant::Bool) {
+                runInBackground = argument.toBool();
+            }
+            else {
+                processArguments << argument.toString();
+            }
+            if (getArgumentCount(L_p) >= 3) {
+                if (argument.type() == QVariant::Bool) {
+                    processArguments << argument.toString();
+                }
+                runInBackground = getVariant(L_p, 3).toBool();
+            }
+            if (runInBackground) {
+                processSuccessed = QProcess::startDetached(processPath, processArguments);
+            }
+            else {
+                processReturn = QProcess::execute(processPath, processArguments);
+            }
+        }
+        else {
+#if QT_VERSION >= 0x050F00
+            processReturn = system(getVariant(L_p, 1).toString().toUtf8().constData());
+#else
+            processReturn = QProcess::execute(getVariant(L_p, 1).toString());
+#endif
+        }
+        if (runInBackground && !processSuccessed) {
+            processReturn = -2;
+        }
+        else if (!runInBackground && processReturn == 0) {
+            processSuccessed = true;
+        }
+        pushVariant(L_p, processSuccessed);
+        pushVariant(L_p, processReturn);
+        return 2;
+    }
+    pushVariant(L_p, false);
+    pushVariant(L_p, -2);
+    return 2;
 }

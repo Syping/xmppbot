@@ -26,7 +26,7 @@ class XmppBotLuaThread : public QThread
 {
     Q_OBJECT
 public:
-    XmppBotLuaThread(const QString &filePath, const QString &lua_function, const QVariantList &lua_args);
+    XmppBotLuaThread(const QString &filePath, const QString &lua_function, const QVariantList &lua_args, const bool &lua_globalthread = false);
 
 protected:
     void run();
@@ -35,6 +35,10 @@ private:
     QString filePath;
     QString lua_function;
     QVariantList lua_args;
+    bool lua_globalthread;
+
+signals:
+    void executeLuaFunction(const QString &lua_function, const QVariantList &lua_args);
 };
 
 #endif // XMPPBOTLUATHREAD_H
