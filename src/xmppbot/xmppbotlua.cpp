@@ -61,6 +61,9 @@ XmppBotLua::XmppBotLua(QObject *parent) : QObject(parent)
 
     // Process
     pushFunction("executeProcess", executeProcess);
+
+    // Table
+    pushFunction("tableContains", tableContains);
 }
 
 XmppBotLua::~XmppBotLua()
@@ -199,7 +202,7 @@ void XmppBotLua::pushVariant(lua_State *L_p, const QVariant &variant)
             currentId++;
         }
     }
-    else if ((QMetaType::Type)variant.type() == QMetaType::QVariantList) {
+    else if (static_cast<QMetaType::Type>(variant.type()) == QMetaType::QVariantList) {
         const QVariantList variantList = variant.toList();
         lua_createtable(L_p, 0, variantList.count());
         int currentId = 1;
@@ -210,7 +213,7 @@ void XmppBotLua::pushVariant(lua_State *L_p, const QVariant &variant)
             currentId++;
         }
     }
-    else if ((QMetaType::Type)variant.type() == QMetaType::QVariantMap) {
+    else if (static_cast<QMetaType::Type>(variant.type()) == QMetaType::QVariantMap) {
         const QVariantMap variantMap = variant.toMap();
         lua_createtable(L_p, 0, variantMap.count());
         for (auto it = variantMap.constBegin(); it != variantMap.constEnd(); it++) {
@@ -219,7 +222,7 @@ void XmppBotLua::pushVariant(lua_State *L_p, const QVariant &variant)
             lua_settable(L_p, -3);
         }
     }
-    else if ((QMetaType::Type)variant.type() == QMetaType::Void || (QMetaType::Type)variant.type() == QMetaType::VoidStar) {
+    else if (static_cast<QMetaType::Type>(variant.type()) == QMetaType::Void || static_cast<QMetaType::Type>(variant.type()) == QMetaType::VoidStar) {
         lua_pushlightuserdata(L_p, variant.value<void*>());
     }
     else {
@@ -488,4 +491,24 @@ int XmppBotLua::executeProcess(lua_State *L_p)
     pushVariant(L_p, false);
     pushVariant(L_p, -2);
     return 2;
+}
+
+int XmppBotLua::tableContains(lua_State *L_p)
+{
+    if (getArgumentCount(L_p) >= 2) {
+        const QVariant vtable = getVariant(L_p, 1);
+        if (static_cast<QMetaType::Type>(vtable.type()) == QMetaType::QVariantMap) {
+            const QVariantMap table = vtable.toMap();
+            const QVariant toMatch = getVariant(L_p, 2);
+            for (const QVariant &value : table) {
+                if (value == toMatch) {
+                    pushVariant(L_p, true);
+                    return 1;
+                }
+            }
+            pushVariant(L_p, false);
+            return 1;
+        }
+    }
+    return 0;
 }

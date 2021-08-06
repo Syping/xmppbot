@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.7)
 
-project(xmppbot VERSION 0.5 LANGUAGES CXX)
+project(xmppbot VERSION 0.6 LANGUAGES CXX)
 
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
 

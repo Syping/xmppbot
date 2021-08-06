@@ -83,6 +83,9 @@ private:
     // Process
     static int executeProcess(lua_State *L_p);
 
+    // Table
+    static int tableContains(lua_State *L_p);
+
     // Lua
     lua_State *L;
 };
