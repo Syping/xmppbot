@@ -188,8 +188,13 @@ void XmppBotLua::pushVariant(lua_State *L_p, const QVariant &variant)
     else if (variant.type() == QVariant::Double) {
         lua_pushnumber(L_p, variant.toDouble());
     }
+    else if (variant.type() == QVariant::ByteArray) {
+        const QByteArray luaBArray = variant.toByteArray();
+        lua_pushlstring(L_p, luaBArray.data(), luaBArray.size());
+    }
     else if (variant.type() == QVariant::String) {
-        lua_pushstring(L_p, variant.toString().toUtf8().data());
+        const QByteArray luaBArray = variant.toString().toUtf8();
+        lua_pushlstring(L_p, luaBArray.data(), luaBArray.size());
     }
     else if (variant.type() == QVariant::StringList) {
         const QStringList stringList = variant.toStringList();
@@ -197,7 +202,8 @@ void XmppBotLua::pushVariant(lua_State *L_p, const QVariant &variant)
         int currentId = 1;
         for (const QString &string : stringList) {
             lua_pushinteger(L_p, currentId);
-            lua_pushstring(L_p, string.toUtf8().data());
+            const QByteArray luaBArray = string.toUtf8();
+            lua_pushlstring(L_p, luaBArray.data(), luaBArray.size());
             lua_settable(L_p, -3);
             currentId++;
         }
@@ -217,7 +223,8 @@ void XmppBotLua::pushVariant(lua_State *L_p, const QVariant &variant)
         const QVariantMap variantMap = variant.toMap();
         lua_createtable(L_p, 0, variantMap.count());
         for (auto it = variantMap.constBegin(); it != variantMap.constEnd(); it++) {
-            lua_pushstring(L_p, it.key().toUtf8().data());
+            const QByteArray luaBArray = it.key().toUtf8();
+            lua_pushlstring(L_p, luaBArray.data(), luaBArray.size());
             pushVariant(L_p, it.value());
             lua_settable(L_p, -3);
         }
@@ -259,7 +266,9 @@ QVariant XmppBotLua::getVariant(lua_State *L_p, int index)
         return QVariant::fromValue(lua_tonumber(L_p, index));
     }
     else if (lua_isstring(L_p, index)) {
-        return QVariant::fromValue(QString(lua_tostring(L_p, index)));
+        size_t size;
+        const char* str = lua_tolstring(L_p, index, &size);
+        return QVariant::fromValue(QByteArray(str, size));
     }
     else if (lua_istable(L_p, index)) {
         QVariantMap variantMap;
@@ -267,7 +276,9 @@ QVariant XmppBotLua::getVariant(lua_State *L_p, int index)
         lua_pushnil(L_p);
         while (lua_next(L_p, -2) != 0) {
             lua_pushvalue(L_p, -2);
-            const QString key = QString(lua_tostring(L_p, -1));
+            size_t size;
+            const char* str = lua_tolstring(L_p, -1, &size);
+            const QString key = QString::fromUtf8(str, size);
             const QVariant value = getVariant(L_p, -2);
             variantMap.insert(key, value);
             lua_pop(L_p, 2);

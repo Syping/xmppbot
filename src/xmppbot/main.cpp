@@ -39,7 +39,7 @@ int main(int argc, char *argv[])
 {
     QCoreApplication app(argc, argv);
     app.setApplicationName(QLatin1String("xmppbot"));
-    app.setApplicationVersion(QLatin1String("0.6"));
+    app.setApplicationVersion(QLatin1String("0.6.1"));
 
     QCommandLineParser commandLineParser;
     commandLineParser.addPositionalArgument(QLatin1String("config"), QCoreApplication::translate("xmppbot", "Configuration file."));
